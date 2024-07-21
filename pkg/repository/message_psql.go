@@ -23,9 +23,9 @@ func (r *MessagePostgres) Create(message messageservice.MessageItem) (int, error
 	}
 	var itemId int
 
-	createMessageQuery := fmt.Sprintf("INSERT INTO %s (text, time) VALUES ($1,$2)", messageTable)
-	_, err = tr.Exec(createMessageQuery, message.Text, message.Time)
-	if err != nil {
+	createMessageQuery := fmt.Sprintf("INSERT INTO %s (text, time) VALUES ($1,$2) RETURNING id", messageTable)
+	row := tr.QueryRow(createMessageQuery, message.Text, message.Time)
+	if err := row.Scan(&itemId); err != nil {
 		tr.Rollback()
 		return 0, err
 	}
@@ -42,7 +42,7 @@ func (r *MessagePostgres) CreateTable() error {
     CREATE TABLE IF NOT EXISTS messageTable (
         id SERIAL PRIMARY KEY,
         text VARCHAR(250) NOT NULL,
-        time VARCHAR(100) UNIQUE NOT NULL
+        time TIMESTAMP NOT NULL
     );`
 
 	// Execute the SQL statement
