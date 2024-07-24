@@ -2,6 +2,7 @@ package messageservice
 
 import (
 	"context"
+	"log"
 	"messageservice"
 	"messageservice/pkg/handlers"
 	"messageservice/pkg/repository"
@@ -22,6 +23,7 @@ import (
 func Run() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	logger := zerolog.New(os.Stdout).Level(zerolog.TraceLevel)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	if err := initConfig(); err != nil {
 		logger.Error().Err(err).Msg("")
 		logger.Fatal().Msg("There was an error with configs")
@@ -46,22 +48,17 @@ func Run() {
 	services := service.NewService(repos)
 	handlers := handlers.NewHandler(services)
 	serv := new(messageservice.Server)
-	/*
-		wg := &sync.WaitGroup{}
-		wg.Add(1) */
 	go func() {
-		//	defer wg.Done()
 		if err := handlers.CreateTableSQL(); err != nil {
 			logger.Error().Err(err).Msg("")
 			logger.Fatal().Msg("There was an error with creating a table in database")
 		}
 	}()
-	//wg.Add(1)
 	go func() {
-		//	defer wg.Done()
 		if err := serv.RunServer(viper.GetString("port"), handlers.InitRoutes()); err != nil {
-			logger.Error().Err(err).Msg("")
-			logger.Fatal().Msg("There was an error while running a server")
+			errorLog.Fatal(err)
+			//logger.Error().Err(err).Msg("")
+			//logger.Fatal().Msg("There was an error while running a server")
 		}
 	}()
 	logger.Info().Msg("Server is running")
