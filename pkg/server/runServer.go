@@ -1,13 +1,14 @@
 package messageservice
 
 import (
+
+	//	messageservice "messageservice/pkg/server"
+
 	"context"
 	"log"
 	"messageservice"
 	"messageservice/pkg/handlers"
 	"messageservice/pkg/repository"
-
-	//	messageservice "messageservice/pkg/server"
 	"messageservice/pkg/service"
 	"os"
 	"os/signal"
@@ -21,7 +22,6 @@ import (
 )
 
 func Run() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	logger := zerolog.New(os.Stdout).Level(zerolog.TraceLevel)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	if err := initConfig(); err != nil {
@@ -32,7 +32,7 @@ func Run() {
 		logger.Error().Err(err).Msg("")
 		logger.Fatal().Msg("There was an error with env")
 	}
-	db, err := repository.NewPostgresDB(repository.Config{
+	dbpool, err := repository.NewPostgresDB(repository.Config{
 		Host:     viper.GetString("db.host"),
 		Port:     viper.GetString("db.port"),
 		Username: viper.GetString("db.username"),
@@ -44,10 +44,10 @@ func Run() {
 		logger.Error().Err(err).Msg("")
 		logger.Fatal().Msg("There was an error with database")
 	}
-	repos := repository.NewRepository(db)
+	repos := repository.NewRepository(dbpool)
 	services := service.NewService(repos)
 	handlers := handlers.NewHandler(services)
-	serv := new(messageservice.Server)
+	srv := new(messageservice.Server)
 	go func() {
 		if err := handlers.CreateTableSQL(); err != nil {
 			logger.Error().Err(err).Msg("")
@@ -55,28 +55,26 @@ func Run() {
 		}
 	}()
 	go func() {
-		if err := serv.RunServer(viper.GetString("port"), handlers.InitRoutes()); err != nil {
+		if err := srv.RunServer("8000", handlers.InitRoutes()); err != nil {
 			errorLog.Fatal(err)
-			//logger.Error().Err(err).Msg("")
-			//logger.Fatal().Msg("There was an error while running a server")
 		}
 	}()
 	logger.Info().Msg("Server is running")
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
 	logger.Info().Msg("Server is shutting down")
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
-	if err := serv.Shutdown(shutdownCtx); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
 		logger.Error().Err(err).Msg("")
 		logger.Fatal().Msg("There was an error while shutting down the server")
 	}
-	if err := db.Close(); err != nil {
+	if err := dbpool.Close(); err != nil {
 		logger.Error().Err(err).Msg("")
 		logger.Fatal().Msg("There was an error while closing db connection")
 	}
-	//wg.Wait()
+
 }
 
 func initConfig() error {
