@@ -34,9 +34,5 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) {
 		servErr(w, err, err.Error())
 	}
 	fmt.Fprintf(w, "%v", res)
-	//messaging.MessageToKafka(input)
-}
-
-func (h *Handler) consumerKafka(w http.ResponseWriter, r *http.Request) {
-	messaging.ConsumeKafka()
+	messaging.MessageToKafka(input)
 }

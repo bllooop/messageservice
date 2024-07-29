@@ -3,6 +3,8 @@ package handlers
 import (
 	"messageservice/pkg/service"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Handler struct {
@@ -15,7 +17,7 @@ func NewHandler(services *service.Service) *Handler {
 func (h *Handler) InitRoutes() *http.ServeMux {
 	r := http.NewServeMux()
 	r.HandleFunc("/create", h.createMessage)
-	//r.HandleFunc("/consumer", h.consumerKafka)
+	r.Handle("/metrics", promhttp.Handler())
 	return r
 }
 func (h *Handler) CreateTableSQL() error {

@@ -11,7 +11,7 @@ import (
 
 func MessageToKafka(messsages messageservice.MessageItem) {
 	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:52014",
+		"bootstrap.servers": "kafka:9092",
 
 		"acks": "all"})
 
@@ -30,8 +30,6 @@ func MessageToKafka(messsages messageservice.MessageItem) {
 				if ev.TopicPartition.Error != nil {
 					fmt.Printf("Failed to deliver message: %v\n", ev.TopicPartition)
 				} else {
-					//fmt.Printf("Produced message to topic %s: text = %s\n, time = %s\n",
-					//	*ev.TopicPartition.Topic, string(ev.Value), ev.Timestamp)
 					fmt.Printf("Delivered message to %v\n", ev.TopicPartition)
 				}
 			}

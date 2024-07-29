@@ -8,6 +8,7 @@ import (
 	"log"
 	"messageservice"
 	"messageservice/pkg/handlers"
+	cons "messageservice/pkg/messaging"
 	"messageservice/pkg/repository"
 	"messageservice/pkg/service"
 	"os"
@@ -47,6 +48,13 @@ func Run() {
 	repos := repository.NewRepository(dbpool)
 	services := service.NewService(repos)
 	handlers := handlers.NewHandler(services)
+	kc := &cons.KafkaConsumer{}
+	if err := kc.ConsumeKafka(); err != nil {
+		log.Fatalf("Failed to start consumer: %s", err)
+	}
+
+	defer kc.Stop()
+
 	srv := new(messageservice.Server)
 	go func() {
 		if err := handlers.CreateTableSQL(); err != nil {
@@ -63,6 +71,11 @@ func Run() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
+	go func() {
+		<-quit
+		kc.Stop()
+		os.Exit(0)
+	}()
 	logger.Info().Msg("Server is shutting down")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

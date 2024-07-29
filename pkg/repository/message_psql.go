@@ -34,10 +34,8 @@ func (r *MessagePostgres) Create(message messageservice.MessageItem) (int, error
 }
 
 func (r *MessagePostgres) CreateTable() error {
-	// Wait for a short time to simulate background processing
 	time.Sleep(2 * time.Second)
 
-	// SQL statement to create a table
 	createTableSQL := `
     CREATE TABLE IF NOT EXISTS messageTable (
         id SERIAL PRIMARY KEY,
@@ -45,7 +43,6 @@ func (r *MessagePostgres) CreateTable() error {
         time TIMESTAMP NOT NULL
     );`
 
-	// Execute the SQL statement
 	_, err := r.db.Exec(createTableSQL)
 	if err != nil {
 		return fmt.Errorf("error creating table: %w", err)

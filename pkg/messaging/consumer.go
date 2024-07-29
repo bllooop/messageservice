@@ -6,29 +6,33 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
+
+	"messageservice/prometheus"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-func ConsumeKafka() {
+type KafkaConsumer struct {
+	c *kafka.Consumer
+}
 
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:52014",
+func (kc *KafkaConsumer) ConsumeKafka() error {
+	var err error
+	kc.c, err = kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": "kafka:9092",
 
 		"group.id":               "kafka-go-getting-started",
 		"auto.offset.reset":      "earliest",
 		"statistics.interval.ms": 10000})
 
 	if err != nil {
-		fmt.Printf("Failed to create consumer: %s", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to create consumer: %s", err)
 	}
 
 	topic := "messages"
-	err = c.Subscribe(topic, nil)
+	err = kc.c.Subscribe(topic, nil)
 	if err != nil {
-		log.Fatalf("Failed to subscribe to topic: %s", err)
+		return fmt.Errorf("failed to subscribe to topic: %s", err)
 	}
 	//defer c.Close()
 
@@ -36,10 +40,10 @@ func ConsumeKafka() {
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 	/*go func() {
 		for {
-			ev := c.Poll(100)
+			ev := kc.c.Poll(100)
 			switch e := ev.(type) {
 			case *kafka.Message:
-				av, err := c.ReadMessage(100 * time.Millisecond)
+				av, err := kc.c.ReadMessage(100 * time.Millisecond)
 				if err != nil {
 					continue
 				}
@@ -52,47 +56,44 @@ func ConsumeKafka() {
 				if err := json.Unmarshal([]byte(e.String()), &stats); err != nil {
 					log.Printf("Failed to parse statistics: %v\n", err)
 				} else {
-					if topics, ok := stats["topics"].(map[string]interface{}); ok {
-						if topicStats, ok := topics["my-topic"].(map[string]interface{}); ok {
-							if partitions, ok := topicStats["partitions"].(map[string]interface{}); ok {
-								for _, p := range partitions {
-									if partitionStats, ok := p.(map[string]interface{}); ok {
-										if msgCount, ok := partitionStats["msg_cnt"].(float64); ok {
-											log.Printf("Messages processed: %d\n", int(msgCount))
-										}
-										if errCount, ok := partitionStats["rxerrs"].(float64); ok {
-											log.Printf("Receive errors: %d\n", int(errCount))
-										}
-									}
-								}
-							}
-						}
-					}
+					log.Printf("Consumer statistics: %v\n", stats)
 				}
-			default:
-				// Handle other events
 			}
 		}
-	}() */
-
-	run := true
-
-	for run {
-		select {
-		case sig := <-sigchan:
-			fmt.Printf("Caught signal %v: terminating\n", sig)
-			run = false
-		default:
-			ev, err := c.ReadMessage(100 * time.Millisecond)
+	}()
+	go func() {
+		for {
+			ev, err := kc.c.ReadMessage(80 * time.Millisecond)
 			if err != nil {
 				continue
 			}
+			prometheus.KafkaMessages.WithLabelValues(*e.TopicPartition.Topic).Inc()
 			fmt.Printf("Consumed event from topic %s: text = %s\n, time = %s\n",
 				*ev.TopicPartition.Topic, string(ev.Value), ev.Timestamp)
 		}
+	}() */
+	go func() {
+		for {
+			ev := kc.c.Poll(100)
+			switch e := ev.(type) {
+			case *kafka.Message:
+				prometheus.KafkaMessages.WithLabelValues(*e.TopicPartition.Topic).Inc()
+				fmt.Printf("Consumed event from topic %s: text = %s\n, time = %s\n",
+					*e.TopicPartition.Topic, string(e.Value), e.Timestamp)
+			/*case kafka.Error:
+			prometheus.KafkaErrors.WithLabelValues(*e.Code().String()).Inc()
+			fmt.Printf("Error: %v\n", e) */
+			default:
+			}
+		}
+	}()
+	return nil
+}
+
+func (kc *KafkaConsumer) Stop() {
+	if kc.c != nil {
+		kc.c.Close()
+		kc.c = nil
+		log.Println("Consumer stopped")
 	}
-
-	c.Close()
-
-	//select {}
 }
