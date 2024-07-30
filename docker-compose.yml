@@ -2,9 +2,11 @@ version: '3.8'
 
 services:
   messageservice:
+    platform: linux/amd64
+    image: bluero/messageservice
     build: 
       context: .
-      dockerfile: Dockerfile  
+      dockerfile: Dockerfile
     ports:
       - 8000:8000
     depends_on:
@@ -14,6 +16,7 @@ services:
       - DB_PASSWORD=54321
       
   db:
+    platform: linux/amd64
     container_name: db
     restart: always
     image: postgres:latest
@@ -30,6 +33,7 @@ services:
       retries: 5
       
   zookeeper:
+    platform: linux/amd64
     image: 'bitnami/zookeeper:latest'
     ports:
       - '2181:2181'
@@ -37,6 +41,7 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
 
   kafka:
+    platform: linux/amd64
     image: 'bitnami/kafka:latest'
     ports:
       - '9092:9092'
@@ -50,6 +55,7 @@ services:
       - zookeeper
   
   prometheus:
+    platform: linux/amd64
     image: prom/prometheus
     ports:
       - "9090:9090"
