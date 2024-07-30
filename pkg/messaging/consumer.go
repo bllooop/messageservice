@@ -41,25 +41,12 @@ func (kc *KafkaConsumer) ConsumeKafka() error {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
-	/*go func() {
-		for {
-			ev, err := kc.c.ReadMessage(80 * time.Millisecond)
-			if err != nil {
-				continue
-			}
-			prometheus.KafkaMessages.WithLabelValues(*e.TopicPartition.Topic).Inc()
-			fmt.Printf("Consumed event from topic %s: text = %s\n, time = %s\n",
-				*ev.TopicPartition.Topic, string(ev.Value), ev.Timestamp)
-		}
-	}() */
 	go func() {
 		for {
 			ev := kc.c.Poll(100)
 			switch e := ev.(type) {
 			case *kafka.Message:
 				prometheus.KafkaMessages.WithLabelValues(*e.TopicPartition.Topic).Inc()
-				//fmt.Printf("Consumed event from topic %s: text = %s\n, time = %s\n",
-				//*e.TopicPartition.Topic, string(e.Value), e.Timestamp)
 				messageData := map[string]interface{}{
 					"topic":     *e.TopicPartition.Topic,
 					"text":      string(e.Value),

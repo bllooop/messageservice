@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Микросервис"))
+}
 func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -28,7 +31,8 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res, err := JSONStruct(map[string]interface{}{
-		"id": id,
+		"id":   id,
+		"text": input.Text,
 	})
 	if err != nil {
 		servErr(w, err, err.Error())

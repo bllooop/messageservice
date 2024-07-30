@@ -16,6 +16,7 @@ func NewHandler(services *service.Service) *Handler {
 }
 func (h *Handler) InitRoutes() *http.ServeMux {
 	r := http.NewServeMux()
+	r.HandleFunc("/", h.Home)
 	r.HandleFunc("/create", h.createMessage)
 	r.Handle("/metrics", promhttp.Handler())
 	return r

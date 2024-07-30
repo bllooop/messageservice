@@ -21,8 +21,6 @@ func MessageToKafka(messsages messageservice.MessageItem) {
 	}
 	timestamp := time.Now()
 
-	// Go-routine to handle message delivery reports and
-	// possibly other event types (errors, stats, etc)
 	go func() {
 		for e := range p.Events() {
 			switch ev := e.(type) {
