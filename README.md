@@ -5,25 +5,32 @@ Consumer выводит полученное собщение в JSON форма
 Посмотреть метрики и количество обработанных сообщений можно в UI запущенного Prometheus, введя в поле параметр kafka_proccessed_messages.
 ### Есть 3 способа запуска микросервиса:
 1. Локально
-   Необходимо в файле конфигурации указать
+   Необходимо в файле конфигурации configs/config.yaml указать
    ```
    host = "localhost"
    ```
    Запустить контейнер postgres
    ```
+   docker run --name=db -e POSTGRES_PASSWORD='54321' -p 5432:5432 -d postgres
    ```
    Контейнер kafka
    ```
+   confluent local kafka start
    ```
    Контейнер prometheus
    ```
+   docker run \
+    -p 9090:9090 \
+    -v ./prometheus.yml:/etc/prometheus/prometheus.yml \
+    prom/prometheus
    ```
    Ввести в консоль команду
    ```
    go run cmd/main.go
    ```
+   При необходимости, можно заменить названия контейнера базы данных, пароль и порты. Соответствующие параметры для такого же изменения находятся в configs/config.yaml.
 3. Локально при использовании docker-compose
-   Необходимо в файле конфигурации указать
+   Необходимо в файле конфигурации configs/config.yaml указать
    ```
    host = "db"
    ```
@@ -46,12 +53,11 @@ curl --location 'http://{address}:8000/create' \
     "text": {text}
 }'
 ```
+Вместо text ввести желаемое сообщение.
 Вместо address необходимо ввести 
 1. localhost при запуске 1 способом
 2. 0.0.0.0 при запуске вторым способом
 3. 164.92.167.104 при запуске третьим способом
-Вместо text ввести желаемое сообщение.
-
 ### При выполнении запроса в консоль выводятся сообщения от producer и consumer об отправке в Kafka:
 ```
 messageservice-1  | Delivered message to messages[0]@0
