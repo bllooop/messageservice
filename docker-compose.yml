@@ -14,6 +14,8 @@ services:
         condition: service_healthy
     environment:
       - DB_PASSWORD=54321
+    networks:
+      - app-network
       
   db:
     platform: linux/amd64
@@ -25,12 +27,14 @@ services:
     environment:
       - POSTGRES_PASSWORD=54321
     ports:
-      - 5436:5432
+      - 5432:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
       
   zookeeper:
     platform: linux/amd64
@@ -39,6 +43,8 @@ services:
       - '2181:2181'
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - app-network
 
   kafka:
     platform: linux/amd64
@@ -53,6 +59,8 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+    networks:
+      - app-network
   
   prometheus:
     platform: linux/amd64
@@ -63,5 +71,12 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
       - messageservice
+    networks:
+      - app-network
+
 volumes:
   pgdata:
+
+networks:
+  app-network:
+    driver: bridge
